@@ -1,0 +1,187 @@
+<html>
+<head>
+	<title>Práctica 4 - Carlos Biurrun e Iñigo Olcoz</title>
+	<link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" href="css/style.css">
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+	<script src="js/bootstrap.min.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
+
+	<script>
+
+		/*-------------------------------------
+		          GESTION DEL WEB SOCKET
+		--------------------------------------*/
+
+		//var socket = io.connect('http://localhost:8080');
+		var socket = io();
+		// Iniciamos la conexion, pedimos al usuario que diga su nombre para identificarlo
+		socket.on('connect', function(){
+			// Se llamará a la funcion adduser en el servidor, mandandole el nombre de usuario
+ 
+			// Pedir el array con los usuarios para
+				// Ver si  hay 10 usuarios
+				// Si hay hueco, pedir nombre y comprobar
+				// si se repite o si esta vacio
+
+				//Si todo esta correcto, mandamos el 
+				//usuario nuevo al servidor, y pedimos
+				//mensajes antiguos
+
+			socket.emit('adduser', prompt("Introduzca su nombre:"));
+		});
+
+		// Cuando el servidor mande un updatechat, quiere decir que hay mensajes nuevos. Los añadimos
+		socket.on('updatechat', function (username, data) {
+			$('#conversation').append('<b>'+username + ':</b> ' + data + '<br>');
+		});
+
+		// Cuando el servidor mande un updateusers, quiere decir que ha habido cambios en la lista de usuarios
+		socket.on('updateusers', function(data) {
+			$('#users').empty();
+			$.each(data, function(key, value) {
+				$('#users').append('<div>' + key + '</div>');
+			});
+		});
+
+		// Cuando se cargue la página
+		$(function(){
+			// Cada vez que le demos a enviar
+			$('#datasend').click( function() {
+				var message = $('#data').val();
+				$('#data').val('');
+				// Decirle al servidor que le mandas un mensaje nuevo, para que haga las acciones oportunas
+				socket.emit('sendchat', message);
+			});
+
+			// Cuando presionemos enter, que funcione como darle al send
+			$('#data').keypress(function(e) {
+				if(e.which == 13) {
+					$(this).blur();
+					$('#datasend').focus().click();
+				}
+			});
+		});
+
+	/*-------------------------------------
+		      FUNCIONES AJAX ASYNC
+	   Funciones que nos permiten obtener
+		informacion de las categorias y 
+		           productos
+	--------------------------------------*/
+
+
+	//Por defecto, mostramos las camisetas
+	var producto = "camisetas";
+
+
+	//Mediante el select, seleccionaremos la categoria que queremos ver
+	function elegirCategoria(val)
+	{
+	 producto = val;
+	 $.ajax({
+	 	type: 'post',
+	 	url: '/'+val,
+	 	
+	 	/* Si ha ido bien, actualiza el titulo de categoria y las imagenes
+	 	además, ocultamos la parte de producto*/
+	 	success: function (response) {
+	 		console.log(response);
+	  		$("#categoria").text(val);
+	  		$("#img1").attr("src","img/"+response[0])
+	  		$("#img2").attr("src","img/"+response[1])
+	  		$("#img3").attr("src","img/"+response[2])
+	  		$("#infoproducto").css('display','none')
+			$("#imgproducto").css('display','none')
+	 	}
+	 });
+	}
+
+	//Al clickar en una imagen de producto, actualizamos la vista individual del mismo
+	//Esta función  se encarga de hacer la peticion
+	function elegirProducto(id){
+		var url = producto;
+		
+		$.ajax({
+	 	type: 'post',
+	 	url: producto+'/'+id,
+	 	success: function (response) {
+	  		mostrarProducto(id,response);
+	 	}
+		});
+		
+	}
+
+	//Esta funcion gestiona los clicks en la imagen
+	$(document).ready(function(){
+		$('#img1').on("click",function(){
+			elegirProducto(0);
+		})
+		$('#img2').on("click",function(){
+			elegirProducto(1);
+		})
+		$('#img3').on("click",function(){
+			elegirProducto(2);
+		})
+	})
+
+	//Esta funcíon gestiona la actualizacion del HTML con la info correspondiente
+	function mostrarProducto(id,obj){
+		obj.imagen="img/"+obj.imagen;
+		$("#infoproducto").text(obj.desc);
+		$("#imgproducto").find( "img" ).attr("src",obj.imagen);
+		$("#infoproducto").css('display','block')
+		$("#imgproducto").css('display','block')
+	}
+
+	</script>
+</head>
+<body>
+
+<div class="container">
+
+		<div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 well well-lg">
+			<div class="row well well-lg">
+				<select onchange="elegirCategoria(this.value);">
+				  <option value="Camisetas">Camisetas</option>
+				  <option value="Botas">Botas</option>
+				  <option value="Pantalonetas">Pantalonetas</option>
+				</select>
+			</div>
+			<div class="row well well-lg">
+				<div class="row" id="productos">
+					<h1 id="categoria">Camisetas</h1>
+					<div class="col-lg-4 col-md-4 col-sm-4 col-xs-4 well well-sm"><img src="img/osasuna1.jpg" id="img1"></div>
+					<div class="col-lg-4 col-md-4 col-sm-4 col-xs-4 well well-sm"><img src="img/paseo1.jpg" id="img2"></div>
+					<div class="col-lg-4 col-md-4 col-sm-4 col-xs-4 well well-sm"><img src="img/osasunaverde1.jpg" id="img3"></div>
+				</div>
+				<div class="row well well-lg">
+					<div id="imgproducto" class="col-lg-5 col-md-5 col-sm-12 col-xs-12 well well-sm">
+						<img>
+					</div>
+					<div id="infoproducto" class="col-lg-7 col-md-7 col-sm-12 col-xs-12 well well-sm">
+						
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 well well-lg">
+			<h1 class="well well-sm">Chat</h1>
+			<div class="well well-lg" id="chat">
+				<div class="row well well-lg" style="overflow:scroll-y;">
+					<h3>USUARIOS</h3>
+					<div id="users" class="well well-lg"></div>
+				</div>
+				<div class="row well well-lg" style="overflow:scroll-y;">
+					<div id="conversation" class="well well-lg"></div>
+						<input id="data" style="width:200px;" />
+						<input type="button" id="datasend" value="Enviar" />
+				</div>
+			</div>
+		</div>
+
+</div>
+
+</body>
+</html>
